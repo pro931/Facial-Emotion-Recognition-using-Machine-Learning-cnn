@@ -8,6 +8,10 @@ Run locally:  streamlit run app.py
 
 import threading
 import time
+
+# NOTE: WebRTC (aiortc / pylibsrtp) must be imported BEFORE TensorFlow/Keras.
+# Importing it after TensorFlow crashes the process (conflicting OpenSSL symbols).
+from streamlit_webrtc import WebRtcMode, webrtc_streamer
 from collections import deque
 from pathlib import Path
 
@@ -282,12 +286,14 @@ def live_dashboard(stats, ph_metrics, ph_card, ph_charts):
     with ph_charts.container():
         if sum(counts.values()):
             scale = alt.Scale(domain=EMOTIONS, range=[COLOR[e] for e in EMOTIONS])
-            df = pd.DataFrame({"Emotion": list(counts), "Frames": list(counts.values())})
-            donut = alt.Chart(df[df.Frames > 0]).mark_arc(innerRadius=55, cornerRadius=4).encode(
-                theta="Frames:Q",
-                color=alt.Color("Emotion:N", scale=scale,
-                                legend=alt.Legend(orient="bottom", columns=4, labelColor="#C9C9D6", title=None)),
-                tooltip=["Emotion", "Frames"]).properties(height=260, title="Emotion share this session")
+            total = sum(counts.values())
+            df = pd.DataFrame({"Emotion": EMOTIONS, "Share": [counts[e] / total * 100 for e in EMOTIONS]})
+            donut = alt.Chart(df).mark_bar(cornerRadiusEnd=6, height=16).encode(
+                x=alt.X("Share:Q", title="% of frames", scale=alt.Scale(domain=[0, 100])),
+                y=alt.Y("Emotion:N", sort="-x", title=None),
+                color=alt.Color("Emotion:N", scale=scale, legend=None),
+                tooltip=["Emotion", alt.Tooltip("Share:Q", format=".1f")]
+            ).properties(height=260, title="Emotion share this session")
             tl = pd.DataFrame(timeline, columns=["t", "Emotion", "Confidence"])
             dots = alt.Chart(tl).mark_circle(size=28, opacity=.85).encode(
                 x=alt.X("t:Q", title="seconds"), y=alt.Y("Emotion:N", sort=EMOTIONS, title=None),
@@ -296,11 +302,13 @@ def live_dashboard(stats, ph_metrics, ph_card, ph_charts):
             ).properties(height=260, title="Emotion timeline")
             a, b = st.columns(2)
             a.altair_chart(donut.configure(background="transparent").configure_view(stroke=None)
-                           .configure_title(color="#EDEDF2"), use_container_width=True)
+                           .configure_title(color="#EDEDF2")
+                           .configure_axis(labelColor="#A1A1B5", titleColor="#8B8BA3", gridColor="#ffffff14"),
+                           width="stretch")
             b.altair_chart(dots.configure(background="transparent").configure_view(stroke=None)
                            .configure_title(color="#EDEDF2")
                            .configure_axis(labelColor="#A1A1B5", titleColor="#8B8BA3", gridColor="#ffffff14"),
-                           use_container_width=True)
+                           width="stretch")
 
 
 # ================================================================ pages
@@ -327,7 +335,9 @@ def page_demo():
   <div class="stat"><b>7</b><span>emotions</span></div>
   <div class="stat"><b>~66%</b><span>accuracy on FER-2013</span></div>
   <div class="stat"><b>0</b><span>images stored</span></div>
-</div>""", unsafe_allow_html=True)
+</div>
+<div style="text-align:center;margin:-14px 0 26px"><a href="#project" target="_self"
+  style="color:#C4B5FD;text-decoration:none;font-size:14px;font-weight:500">🎓 About the graduation project ↓</a></div>""", unsafe_allow_html=True)
 
     for f in (MODEL_FILE, CASCADE_FILE):
         if not f.exists():
@@ -340,8 +350,6 @@ def page_demo():
                                 default="🔴  Live (real-time)", label_visibility="collapsed")
 
     if mode == "🔴  Live (real-time)":
-        from streamlit_webrtc import WebRtcMode, webrtc_streamer
-
         if "live_stats" not in st.session_state:
             st.session_state.live_stats = LiveStats()
         stats = st.session_state.live_stats
@@ -362,7 +370,7 @@ def page_demo():
                     async_processing=True,
                 )
                 c1, c2 = st.columns([1, 2])
-                if c1.button("Reset session", use_container_width=True):
+                if c1.button("Reset session", width="stretch"):
                     stats.reset()
                 c2.markdown('<div class="note">If the video doesn\'t connect (some office or mobile networks block it), '
                             'use <b>Snapshot</b> or <b>Upload photo</b> above.</div>', unsafe_allow_html=True)
@@ -398,7 +406,7 @@ def page_demo():
                 if source is not None:
                     with st.spinner("Analyzing faces…"):
                         annotated, results = analyze_photo(load_image(source), model, detector)
-                    st.image(annotated, use_container_width=True)
+                    st.image(annotated, width="stretch")
         with right:
             with st.container(border=True):
                 if source is None:
@@ -426,20 +434,19 @@ def page_demo():
 </div>
 <div class="chips"><span class="chip">Python</span><span class="chip">TensorFlow / Keras</span><span class="chip">OpenCV</span>
 <span class="chip">WebRTC</span><span class="chip">Altair</span><span class="chip">Streamlit</span></div>""", unsafe_allow_html=True)
-    footer()
 
 
 def img(name, caption=None):
     p = ASSETS / name
     if p.exists():
-        st.image(str(p), caption=caption, use_container_width=True)
+        st.image(str(p), caption=caption, width="stretch")
 
 
 def page_project():
     st.markdown("""
-<div class="hero">
+<div class="hero" id="project" style="margin-top:90px;padding-top:40px;border-top:1px solid rgba(255,255,255,.06)">
   <span class="eyebrow">🎓 B.Sc. Information Systems · King Khalid University · 2023–24</span>
-  <h1>Facial Emotion Recognition<br><span class="grad">using Machine Learning</span></h1>
+  <h1 style="font-size:clamp(30px,5vw,48px)">About the project:<br><span class="grad">Facial Emotion Recognition</span></h1>
   <p>Graduation project: a system that reads customers' emotions from their facial expressions,
      helping retailers understand satisfaction and which products customers respond to.</p>
 </div>
@@ -517,18 +524,18 @@ and a 4-block Convolutional Neural Network was trained in TensorFlow/Keras on 48
   <li>Better UI/UX ✓ done in this version</li></ul></div>
 </div>
 
-<div class="kicker">07 · Team</div>
-<div class="grid3">
-  <div class="person"><div class="avatar">RA</div><b>Rimas Abdulrhman</b><span>Team member · this web version</span></div>
-  <div class="person"><div class="avatar">GN</div><b>Ghadi Nawaf</b><span>Team member</span></div>
-  <div class="person"><div class="avatar">MM</div><b>Manar Mohamad</b><span>Team member</span></div>
+<div class="kicker">07 · My role</div>
+<div class="grid2">
+  <div class="person" style="text-align:left;display:flex;gap:16px;align-items:center">
+    <div class="avatar" style="margin:0;flex-shrink:0">RA</div>
+    <div><b>Rimas Abdulrhman</b><span>Project Lead · graduation team project<br>Rebuilt as this web app with real-time video</span></div>
+  </div>
+  <div class="tile"><h4>🏫 Academic context</h4><p>B.Sc. Information Systems (Data Science track), College of Computer Science,
+  King Khalid University · Supervised by Dr. Suhail Qadir GH Qadir.</p></div>
 </div>
-<p class="note" style="text-align:center;margin-top:14px">Supervised by Dr. Suhail Qadir GH Qadir · College of Computer Science, King Khalid University</p>
 """, unsafe_allow_html=True)
     footer()
 
 
-pg = st.navigation([st.Page(page_demo, title="Live Demo", icon="🎥", url_path="demo", default=True),
-                    st.Page(page_project, title="The Project", icon="🎓", url_path="project")],
-                   position="top")
-pg.run()
+page_demo()
+page_project()
