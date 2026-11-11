@@ -1,7 +1,9 @@
-streamlit>=1.40
+streamlit>=1.46
+streamlit-webrtc>=0.60
 tensorflow-cpu>=2.16,<2.22
 opencv-python-headless>=4.9,<5
 numpy
 pandas
 pillow
 h5py
+altair
