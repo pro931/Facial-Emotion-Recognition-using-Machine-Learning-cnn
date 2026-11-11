@@ -487,7 +487,7 @@ and a 4-block Convolutional Neural Network was trained in TensorFlow/Keras on 48
     st.markdown('<div class="kicker">04 · System design</div><div class="h2">Designed before it was built.</div>'
                 '<div class="lead">Full systems-analysis package: use cases, class model, activity flow and database '
                 'design.</div>', unsafe_allow_html=True)
-    t1, t2, t3, t4 = st.tabs(["Use case", "Architecture flow", "Class diagram", "ER diagram"])
+    t1, t2, t3, t4, t5 = st.tabs(["Use case", "Architecture flow", "Class diagram", "ER diagram", "Database"])
     with t1:
         img("use_case.png", "UML use case diagram")
     with t2:
@@ -496,6 +496,8 @@ and a 4-block Convolutional Neural Network was trained in TensorFlow/Keras on 48
         img("class_diagram.png", "UML class diagram")
     with t4:
         img("er_diagram.png", "Entity-relationship diagram (SQLite)")
+    with t5:
+        img("db_sqlite.png", "SQLite database: every prediction stored with emotion, date and confidence")
 
     st.markdown("""
 <div class="kicker">05 · Implementation</div>
