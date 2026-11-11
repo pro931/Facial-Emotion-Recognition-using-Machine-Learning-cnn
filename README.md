@@ -3,7 +3,7 @@
 A web app that detects faces in a photo and classifies each one into **7 emotions**:
 Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral.
 
-**🔗 Live demo:** _add your Streamlit link here_
+**🔗 Live demo:** https://rimas-emotion-ai.streamlit.app
 
 ## How it works
 1. **Face detection:** OpenCV Haar Cascade finds faces in the image.
