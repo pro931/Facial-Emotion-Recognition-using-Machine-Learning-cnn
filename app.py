@@ -438,6 +438,9 @@ def page_demo():
 
 def img(name, caption=None):
     p = ASSETS / name
+    svg = p.with_suffix(".svg")
+    if svg.exists():
+        p = svg  # sharp vector version of the diagram
     if p.exists():
         st.image(str(p), caption=caption, width="stretch")
 
